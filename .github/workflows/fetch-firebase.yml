@@ -11,10 +11,10 @@ jobs:
     
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
 
@@ -26,10 +26,10 @@ jobs:
     - name: Run Firebase export script
       env:
         FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
-      run: python fetch_firebase_messages.py  # Replace with your actual script filename
+      run: fetch_firebase_messages.py  # Replace with your actual script filename
 
     - name: Upload output CSV
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: firebase-messages
         path: firebase_messages_output.csv

@@ -1,9 +1,9 @@
 name: Firebase Messages Export
 
 on:
-  workflow_dispatch:  # Allows manual triggering
+  workflow_dispatch:
   schedule:
-    - cron: '0 * * * *'  # Runs every hour
+    - cron: '0 * * * *'
 
 jobs:
   export-messages:
@@ -26,7 +26,7 @@ jobs:
     - name: Run Firebase export script
       env:
         FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
-      run: python fetch_firebase_messages.py  # Replace with your actual script filename
+      run: python fetch_firebase_messages.py
 
     - name: Upload output CSV
       uses: actions/upload-artifact@v4

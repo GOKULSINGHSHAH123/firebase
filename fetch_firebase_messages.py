@@ -14,7 +14,7 @@ from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 
 # Hardcoded email credentials
-SENDER_EMAIL = "gokul.220btccse041@sushantuniversity.edu.in"
+SENDER_EMAIL = "gokulsinghshah041@gmail.com"
 RECEIVER_EMAIL = "madhavik.agarwal@samarth.community"
 EMAIL_PASSWORD = "asxm hriw skph mfpb"  # Hardcoded password
 

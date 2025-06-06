@@ -1,5 +1,7 @@
 account_id,account_name,message,urgency,createdAt
 006f90a4-a8e4-52b1-974b-578f0759a875,Shanti Narain / Uday Narain,"left at 11:18, app was hanged",NOT URGENT,2025-06-06T06:14:32.209011+00:00
+02dd9f39-19e7-488b-ae3c-661dbc97b7f6,Sharad Kumar Bhatnagar / Sharad Bhatnagar,Reached back after consultation ,NOT URGENT,2025-06-06T06:43:56.201866+00:00
+04ffb91b-4e3a-488c-b30e-0641bbd74a44,Nimai Chandra Roy / Avisek Ray,left,NOT URGENT,2025-06-06T06:48:53.832064+00:00
 08f3ed83-d751-5d43-ae68-402359ea82d3,Yogendra Kumar Gupta & Sudha Rani Gupta / Kapil K Gupta,,NOT URGENT,2025-06-06T06:28:29.716889+00:00
 08f3ed83-d751-5d43-ae68-402359ea82d3,Yogendra Kumar Gupta & Sudha Rani Gupta / Kapil K Gupta,went to glass shop ,NOT URGENT,2025-06-06T06:28:36.775350+00:00
 08f3ed83-d751-5d43-ae68-402359ea82d3,Yogendra Kumar Gupta & Sudha Rani Gupta / Kapil K Gupta,leaving now,NOT URGENT,2025-06-06T06:32:37.720505+00:00
@@ -10,15 +12,13 @@ She also told she has some work for which she will be calling Ranjana in the eve
 Uncle is doing good .",NOT URGENT,2025-06-06T06:21:12.331739+00:00
 12af273e-bd8f-5373-b12b-abe5219ffbcc,Rekha Upadhyay / Arvind Upadhyay,reached at aunty home  n will go for bank work in sometime,NOT URGENT,2025-06-06T06:03:05.063940+00:00
 12af273e-bd8f-5373-b12b-abe5219ffbcc,Rekha Upadhyay / Arvind Upadhyay,waiting for driver,NOT URGENT,2025-06-06T06:03:18.058664+00:00
-1bbd0dfd-7c49-5be8-b548-336039056583,Shiva Bhagwan Chhaochharia / Gautam Chhaochharia,Spoke to uncle & he sounded very happy. Both the parents are doing well & are having a wonderful time in Mumbai with Gautam & his family. They will be returning next week. We will arrange for airport pick-up once uncle shares the travel details,NOT URGENT,2025-06-06T05:48:00.842000+00:00
-1ba66ff3-4723-4b44-84cc-6757ded66bda,Sipra Ghosh / Shrawani Ghosh,reached 11am,NOT URGENT,2025-06-06T05:49:06.215042+00:00
 1ba66ff3-4723-4b44-84cc-6757ded66bda,Sipra Ghosh / Shrawani Ghosh,reached venkatashwar hospital ,NOT URGENT,2025-06-06T06:13:34.598058+00:00
 26a62570-1e67-598f-abbc-3323c341f5b6,Bina Shrikent / Dhruv Shrikent,Texted aunty enquiring about her well-being & she replied saying that she is doing well & having a great time with Adi & family,NOT URGENT,2025-06-06T06:09:54.168000+00:00
 3b4a911d-6145-4af7-aada-733381f91051,Radha Rani Gupta / Ritu Gupta,"Checked with aunty...she is ok. Was waiting for her car which is being sent by her sister in law only. A room has been arranged for aunty in their clinic in Delhi and aunty will return on Sunday. Ritu will also be here Sunday night. 
 Will be in touch with aunty. ",NOT URGENT,2025-06-06T06:13:59.208311+00:00
 41049dab-5f62-4bd4-9c51-8b441412dc36,Gopaldas Saraf / Sanskriti Nath,yes I will tell him or can I do a suprise visit saying I was passing from here and came to meet  you tomorrow at 4pm ??? will this work...,NOT URGENT,2025-06-06T06:34:31.742516+00:00
 41049dab-5f62-4bd4-9c51-8b441412dc36,Gopaldas Saraf / Sanskriti Nath,coz uncle refuses in evening once he get convinced  I can plan accordingly ,NOT URGENT,2025-06-06T06:35:46.773412+00:00
-483135e4-8d44-4268-9c7b-d19602780275,Kuldip Dhingra / Aadarsh Baijal,cctv guy not coming today ,URGENT,2025-06-06T05:48:47.158055+00:00
+41049dab-5f62-4bd4-9c51-8b441412dc36,Gopaldas Saraf / Sanskriti Nath,yes that Shd be nice ,NOT URGENT,2025-06-06T06:40:51.155550+00:00
 4eea4457-effa-51bd-92b6-d232fc3964b9,Debasish Mukherjee / Debarati Mukherjee,"Spoke to aunty & she is doing fine. Bishaka will be staying with her for 24 hrs. Reminded aunty not to lift anything heavy with her right hand, to sponge bathe for the next two days & then resume proper baths with precautions",NOT URGENT,2025-06-06T06:27:14.388000+00:00
 55231c1a-0cd9-4b21-8f69-447c8c05cb04,Subhash Subberwal / Naina Subberwal,Namrata has reached at 11:15am.,NOT URGENT,2025-06-06T05:56:06.388641+00:00
 6c117e1d-13b2-50a8-adc4-a3073014df59,Bimal Jalan / Radhika Chandrasekhar,"Nani was unwell on Monday. She vomitted and was extremely drowsy post that. Aunty and nurses gave her sugar and salt as first aid. Aunty consulted Dr. Kakkar who prescribed blood test post which he prescribed Ceftum as report showed infection. 
@@ -29,14 +29,19 @@ Uncle is keeping well",NOT URGENT,2025-06-06T06:30:58.643000+00:00
 6c6bd7dd-4935-4bc0-bda8-3eafb578bd92,Malti Prasad / Sona Prasad,"I just spoke with Aunty and she informed me that Uncle is showing signs of a swift and steady recovery. It was truly reassuring to hear such positive news. There is a strong possibility that he will be discharged from the hospital today itself, and may be able to return home by this evening. We remain hopeful for his continued recovery and wish him good health ahead.Aunty is also doing well ",NOT URGENT,2025-06-06T06:25:42.495859+00:00
 6c6bd7dd-4935-4bc0-bda8-3eafb578bd92,Malti Prasad / Sona Prasad,wow that's sound great ..uncle have a speedy recovery 🙏 ,NOT URGENT,2025-06-06T06:32:46.576635+00:00
 6f3768a2-ec45-5f56-a6a9-b77ab47e5ccf,Vinod Dublish / Sunita,"picked clothes from home around 11 then came to hospital Dr.Ashish is in OT, met his junior he said sir will take time now we are waiting for ortho clearance.",NOT URGENT,2025-06-06T06:35:32.327919+00:00
-746c6945-649c-49bf-b3de-129e09745719,Pushpa Samant / Prashant,reached Aunty at 11am,NOT URGENT,2025-06-06T05:41:23.950822+00:00
+746c6945-649c-49bf-b3de-129e09745719,Pushpa Samant / Prashant,Left ,NOT URGENT,2025-06-06T06:47:52.601167+00:00
+7b72888a-0fcc-4325-adea-ac2cefbaed73,Amar Singh Shah / Taranpreet Kaur Bhatia,"Greetings 
+Had a word with uncle ji sometime back, parents are doing well and keep engaged in routine activities, following a healthy lifestyle. Sonia will visit parents next week as discussed with uncle. ",NOT URGENT,2025-06-06T06:46:04.987781+00:00
 89b0a32c-3882-51d3-ab6e-e843a436ff46,Virendra Kumar Verma / Ashish Verma,going for a drive to nariman point ,NOT URGENT,2025-06-06T06:10:55.640518+00:00
-8eee0a4a-58d1-47bd-b5d1-585464e4fd4a,Raj Kumari Gupta / Deepa Bhartia,"Spoke with Aunty today—she was fine and having her breakfast. She mentioned waiting to see how the doctor’s new medicine works. Helper Daisy also shared that Aunty has been better over the last two days. Overall, things seem to be improving, and we’ll continue to monitor and stay in touch.",NOT URGENT,2025-06-06T05:48:32.807124+00:00
+89b0a32c-3882-51d3-ab6e-e843a436ff46,Virendra Kumar Verma / Ashish Verma,,NOT URGENT,2025-06-06T06:44:56.034079+00:00
+89b0a32c-3882-51d3-ab6e-e843a436ff46,Virendra Kumar Verma / Ashish Verma,,NOT URGENT,2025-06-06T06:45:09.369420+00:00
+89b0a32c-3882-51d3-ab6e-e843a436ff46,Virendra Kumar Verma / Ashish Verma,,NOT URGENT,2025-06-06T06:45:35.058945+00:00
 8eee0a4a-58d1-47bd-b5d1-585464e4fd4a,Raj Kumari Gupta / Deepa Bhartia,"Thanks, Namrata 
 yes, she seems better with the medicine changes ",NOT URGENT,2025-06-06T06:30:06.639977+00:00
 8eee0a4a-58d1-47bd-b5d1-585464e4fd4a,Raj Kumari Gupta / Deepa Bhartia,when is Meenu planned to visit & when can u send me requested info about the walkers ?,NOT URGENT,2025-06-06T06:30:37.451166+00:00
 8eee0a4a-58d1-47bd-b5d1-585464e4fd4a,Raj Kumari Gupta / Deepa Bhartia,moving around & walking a bit will definitely help her in her confidence & health ,NOT URGENT,2025-06-06T06:31:08.898072+00:00
 95e3e7fb-e43e-414d-b1dd-8e4d13e1a56e,Sudha Kakkar / Ashish Kakkar,"Had a word with Aunty today—she is fine but a bit concerned about her UTI. She told me about her doctor’s visit yesterday, during which the doctor advised a weekly injection for the condition. Aunty asked if we could help arrange someone to administer the injection at home. I told her I would check and update her accordingly. Everything else seems to be under control.",NOT URGENT,2025-06-06T06:06:52.955357+00:00
+a3ef1864-5dc5-48e1-b940-dde5e232ab38,Anita Pabi / Sudeshna Pabi,Aunty 's blood test has been done,NOT URGENT,2025-06-06T06:49:02.297475+00:00
 b0a10374-4da1-4ca5-9103-e670c7a1dee5,Kusum Lata / Rahul Grover,"Hi
 Kindly add funds to the account for tiffin payment. ",NOT URGENT,2025-06-06T06:28:55.354498+00:00
 b10a4665-6e14-5f77-a04d-67780ddacf63,Bharati Mitra / Sunayan Mitra,"Spoke to aunty & she is doing fine. She is feeling much more relieved now that Montu has rejoined. A few days back, she went to watch ""Bigg Boss"" with her sister-in-law. I told her that a lot of good Bengali movies are releasing soon, so we will plan a movie outing together. She sounded excited!",NOT URGENT,2025-06-06T05:57:13.159000+00:00
@@ -48,10 +53,7 @@ She is doing well.
 Aunty’s phone had some issues. It has been resolved . Indira di will be giving it to aunty today . ",URGENT,2025-06-06T06:15:19.393413+00:00
 ca68aaa9-3085-44b2-a8a1-0948ac2be319,Abad Ahmad / Samya Ahmed,Spoke with Uncle today—he is fine and feeling much better. Aunty is also doing well. Uncle mentioned that he has an appointment with the oncologist today and will be going with Neetu. Everything else appears to be in order.,NOT URGENT,2025-06-06T05:55:19.034114+00:00
 d16d10b8-d3eb-563e-9efb-cd8b076f4828,Chandra Lakhani / Vinod Lakhani,ok ,NOT URGENT,2025-06-06T05:53:20.062021+00:00
-d1c7da26-2dfa-4251-8ef3-26854d523719,Alaka Das / Dhritiman Das,"Spoke with Aunty this morning—she was fine, having her breakfast, and sounded good and energetic. I will also check in with the attendant later in the day for any additional updates. Everything seems well at the moment.",NOT URGENT,2025-06-06T05:45:44.371062+00:00
-ee562e64-799f-5bf4-9723-9481bfa5fc0e,Usha Narayanan / Arjun Narayanan,Spoke with aunty..she said to visit her tommorow to guide her on mobile and Amazon usage..,NOT URGENT,2025-06-06T05:52:03.811200+00:00
-f19c4909-8dda-4e3e-80cb-658ddba1eacf,T.G.Babu / Chaitra B,Reached aunty's house at 10.50,NOT URGENT,2025-06-06T05:43:25.208642+00:00
-f19c4909-8dda-4e3e-80cb-658ddba1eacf,T.G.Babu / Chaitra B,booked an auto started to hospital ,NOT URGENT,2025-06-06T05:43:57.509204+00:00
+e7e446b2-f3b3-5a4d-be8f-79708666d6c8,Rajendra Prasad Khaitan / Anuradha Khaitan,👍,NOT URGENT,2025-06-06T06:47:23.439611+00:00
 f19c4909-8dda-4e3e-80cb-658ddba1eacf,T.G.Babu / Chaitra B,Reached hospital at 11.20,NOT URGENT,2025-06-06T06:05:27.929446+00:00
 f19c4909-8dda-4e3e-80cb-658ddba1eacf,T.G.Babu / Chaitra B,Wax Physiotherapy started at 11.30,NOT URGENT,2025-06-06T06:05:44.806574+00:00
 f19c4909-8dda-4e3e-80cb-658ddba1eacf,T.G.Babu / Chaitra B,Started Exercise ,NOT URGENT,2025-06-06T06:39:31.895149+00:00

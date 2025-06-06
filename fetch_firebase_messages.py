@@ -5,8 +5,6 @@ import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 from datetime import datetime, timedelta
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import torch
 
 # Initialize Firebase
 with open("firebase_credentials.json", "w") as f:
@@ -64,3 +62,4 @@ df_exploded = pd.concat([
         df_exploded.drop(columns=['messages']),
         pd.json_normalize(df_exploded['messages'])
 ], axis=1)
+df_exploded.to_csv("firebase_messages_output.csv", index=False)

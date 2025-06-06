@@ -1,7 +1,7 @@
 name: Dump Firebase Credentials
 
 on:
-  workflow_dispatch:  # You can trigger it manually
+  workflow_dispatch:
 
 jobs:
   run-script:
@@ -13,7 +13,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.10
+          python-version: '3.10'  # ✅ use a valid version (3.8, 3.9, 3.10, etc.)
 
       - name: Install dependencies
         run: |

@@ -1,25 +1,32 @@
-name: Dump Firebase Credentials
+name: Export Firestore Accounts to CSV
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Run manually
 
 jobs:
-  run-script:
+  export:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Repo
+      - name: Checkout Code
         uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'  # ✅ use a valid version (3.8, 3.9, 3.10, etc.)
+          python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
-          pip install firebase-admin pandas tqdm
+          pip install firebase-admin pandas
 
-      - name: Run script
+      - name: Run export script
         env:
           FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
         run: python fetch_firebase_messages.py
+
+      - name: Upload messages.csv
+        uses: actions/upload-artifact@v4
+        with:
+          name: messages-csv
+          path: messages.csv

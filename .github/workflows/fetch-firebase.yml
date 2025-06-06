@@ -1,0 +1,35 @@
+name: Fetch Firebase Messages
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # Runs every 10 minutes (adjust as needed)
+  workflow_dispatch:        # Allows manual triggering
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.10  # ✅ Use supported version
+
+    - name: Install dependencies
+      run: |
+        pip install firebase-admin pandas tqdm 
+
+    - name: Run the Firebase message fetch script
+      env:
+        FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
+      run: |
+        python fetch_firebase_messages.py
+
+    - name: Upload CSV output
+      uses: actions/upload-artifact@v3
+      with:
+        name: firebase-messages
+        path: firebase_messages_output.csv

@@ -1,26 +1,39 @@
-name: Fetch Firebase Messages
+name: Update Messages
 
 on:
-  workflow_dispatch:  # manually trigger
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
 
 jobs:
-  run-script:
+  update-messages:
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write  # Critical for pushing changes
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
 
-      - name: Install dependencies
-        run: |
-          pip install firebase-admin pandas tqdm
+    - name: Install dependencies
+      run: pip install firebase_admin pandas
 
-      - name: Run Firebase script
-        env:
-          FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
-        run: python fetch_firebase_messages.py
+    - name: Fetch Firebase messages
+      env:
+        FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
+      run: python fetch_firebase_messages.py
+
+    - name: Commit and push changes
+      run: |
+        git config --global user.name 'GitHub Actions'
+        git config --global user.email 'actions@users.noreply.github.com'
+        git add messages.csv
+        git commit -m "Automatically update messages.csv"
+        git push

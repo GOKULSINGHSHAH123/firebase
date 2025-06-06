@@ -1,32 +1,26 @@
-name: Export Firestore Accounts to CSV
+name: Fetch Firebase Messages
 
 on:
-  workflow_dispatch:  # Run manually
+  workflow_dispatch:  # manually trigger
 
 jobs:
-  export:
+  run-script:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
-          pip install firebase-admin pandas
+          pip install firebase-admin pandas tqdm
 
-      - name: Run export script
+      - name: Run Firebase script
         env:
           FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
         run: python fetch_firebase_messages.py
-
-      - name: Upload messages.csv
-        uses: actions/upload-artifact@v4
-        with:
-          name: messages-csv
-          path: messages.csv

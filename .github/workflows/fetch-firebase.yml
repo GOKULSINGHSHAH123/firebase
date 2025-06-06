@@ -29,7 +29,7 @@ jobs:
     - name: Generate urgent messages report
       env:
         FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
-      run: python generate_urgent_report.py
+      run: python fetch_firebase_messages.py
 
     - name: Commit and push report
       run: |

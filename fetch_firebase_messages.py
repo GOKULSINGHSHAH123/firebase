@@ -10,11 +10,19 @@ from datetime import datetime, timedelta
 with open("firebase_credentials.json", "w") as f:
     f.write(os.environ["FIREBASE_CREDENTIALS"])
 cred = credentials.Certificate("firebase_credentials.json")
-# firebase_admin.initialize_app(cred)
+
+# Initialize the app - THIS WAS MISSING
+try:
+    firebase_admin.get_app()
+except ValueError:
+    firebase_admin.initialize_app(cred)
+
 db = firestore.client()
 
-
+# Rest of your existing code...
 one_hour_ago = datetime.utcnow() - timedelta(hours=5)
+
+
 
 # Fetch account data
 def fetch_accounts():
@@ -63,3 +71,5 @@ df_exploded = pd.concat([
         pd.json_normalize(df_exploded['messages'])
 ], axis=1)
 df_exploded.to_csv("firebase_messages_output.csv", index=False)
+os.remove("firebase_credentials.json")
+

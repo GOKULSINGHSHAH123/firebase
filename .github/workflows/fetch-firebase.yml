@@ -1,4 +1,4 @@
-name: Update Messages
+name: Update Messages Report
 
 on:
   schedule:
@@ -6,11 +6,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  update-messages:
+  update-report:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Critical for pushing changes
-    
+      contents: write
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -23,17 +23,18 @@ jobs:
         python-version: '3.10'
 
     - name: Install dependencies
-      run: pip install firebase_admin pandas
+      run: |
+        pip install firebase_admin pandas tqdm transformers torch
 
-    - name: Fetch Firebase messages
+    - name: Generate urgent messages report
       env:
         FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
-      run: python fetch_firebase_messages.py
+      run: python generate_urgent_report.py
 
-    - name: Commit and push changes
+    - name: Commit and push report
       run: |
         git config --global user.name 'GitHub Actions'
         git config --global user.email 'actions@users.noreply.github.com'
-        git add messages.csv
-        git commit -m "Automatically update messages.csv"
+        git add urgent_messages_report.csv
+        git commit -m "Auto-update urgent messages report"
         git push

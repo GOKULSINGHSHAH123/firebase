@@ -8,6 +8,15 @@ from tqdm import tqdm
 from datetime import datetime, timedelta
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+
+# Hardcoded email credentials
+SENDER_EMAIL = "gokul.220btccse041@sushantuniversity.edu.in"
+RECEIVER_EMAIL = "madhavik.agarwal@samarth.community"
+EMAIL_PASSWORD = "asxm hriw skph mfpb"  # Hardcoded password
 
 # Decode and write FIREBASE_CREDENTIALS to file
 firebase_creds = os.environ["FIREBASE_CREDENTIALS"]
@@ -87,6 +96,37 @@ def classify_urgency(message, tokenizer, model):
         print(f"Classification error: {e}")
         return "NOT URGENT"
 
+def send_email_with_attachment(csv_path):
+    """Send email with CSV attachment using hardcoded credentials"""
+    # Create message container
+    msg = MIMEMultipart()
+    msg['From'] = SENDER_EMAIL
+    msg['To'] = RECEIVER_EMAIL
+    msg['Subject'] = "Urgent Messages Report"
+    
+    # Email body
+    body = f"""
+    Automated report generated at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    
+    This report contains messages classified as urgent from the last hour.
+    """
+    msg.attach(MIMEText(body, 'plain'))
+    
+    # Attach CSV file
+    with open(csv_path, "rb") as attachment:
+        part = MIMEApplication(attachment.read(), Name=os.path.basename(csv_path))
+    part['Content-Disposition'] = f'attachment; filename="{os.path.basename(csv_path)}"'
+    msg.attach(part)
+    
+    # Send email
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(SENDER_EMAIL, EMAIL_PASSWORD)
+            server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, msg.as_string())
+        print("✅ Report sent successfully via email")
+    except Exception as e:
+        print(f"❌ Email sending failed: {str(e)}")
+
 def main():
     # Fetch accounts and messages
     accounts = fetch_accounts()
@@ -118,9 +158,13 @@ def main():
     )
     
     # Save results
+    csv_path = 'urgent_messages_report.csv'
     df = df[['account_id', 'account_name', 'message', 'urgency', 'createdAt']]
-    df.to_csv('urgent_messages_report.csv', index=False)
+    df.to_csv(csv_path, index=False)
     print(f"\n✅ Report generated with {len(df)} messages")
+    
+    # Send email with attachment
+    send_email_with_attachment(csv_path)
 
 if __name__ == "__main__":
     main()

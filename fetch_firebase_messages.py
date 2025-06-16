@@ -13,9 +13,10 @@ import time
 import re
 
 # Environment configuration
+# Environment configuration - USE THESE IN YOUR FUNCTION
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "aisamarth2016@gmail.com")
 RECEIVER_EMAIL = os.environ.get("RECEIVER_EMAIL", "madhavik.agarwal@samarth.community")
-EMAIL_PASSWORD = "xcag hxya fypu nbsq"
+EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "xcag hxya fypu nbsq")  # Added env fallback
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 FIREBASE_CREDENTIALS = os.environ["FIREBASE_CREDENTIALS"]
 
@@ -167,7 +168,6 @@ def batch_classify_messages(messages):
         time.sleep(1)  # Rate limit protection
     
     return results
-
 def send_email_with_attachment(csv_path, time_interval):
     """Send email with CSV attachment using EmailMessage"""
     msg = EmailMessage()
@@ -190,15 +190,15 @@ This report contains messages classified as urgent during:
         maintype="text",
         subtype="csv",
         filename=os.path.basename(csv_path)
-    )
     
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login("aisamarth2016@gmail.com", "xcag hxya fypu nbsq")
+            server.login(SENDER_EMAIL, EMAIL_PASSWORD)  # Use environment variables
             server.send_message(msg)
         print("✅ Report sent successfully via email")
     except Exception as e:
         print(f"❌ Email sending failed: {str(e)}")
+        raise  # Re-raise exception for better error visibility
 
 def append_to_master_csv(df, filename="all_messages.csv"):
     """Append messages to master CSV file in GitHub Actions"""

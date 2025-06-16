@@ -2,7 +2,7 @@ name: Update Messages Report
 
 on:
   schedule:
-    - cron: '*/53 * * * *'  # Runs every 30 minutes
+    - cron: '*/53 * * * *'  # Every 53 minutes
   workflow_dispatch:
 
 jobs:
@@ -35,11 +35,11 @@ jobs:
         RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
       run: python fetch_firebase_messages.py
 
-    - name: Commit and push report
+    - name: Commit and push updated master report
       run: |
         git config --global user.name 'GitHub Actions'
         git config --global user.email 'actions@users.noreply.github.com'
-        # Commit all CSV reports with timestamp pattern
-        git add urgent_messages_*.csv
-        git commit -m "Auto-update urgent messages report"
+        git pull --rebase origin main
+        git add all_classified_messages.csv
+        git commit -m "Auto-update classified messages"
         git push

@@ -2,7 +2,7 @@ name: Update Messages Report
 
 on:
   schedule:
-    - cron: '*/53 * * * *'  # Every 53 minutes
+    - cron: '15 */1 * * *'  # Every 1 hour and 15 minutes (at :15 past the hour)
   workflow_dispatch:
 
 jobs:
@@ -24,7 +24,8 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install firebase_admin pandas tqdm openai pytz
+        python -m pip install --upgrade pip
+        pip install firebase-admin pandas tqdm openai pytz python-dotenv
 
     - name: Generate urgent messages report
       env:
@@ -39,7 +40,7 @@ jobs:
       run: |
         git config --global user.name 'GitHub Actions'
         git config --global user.email 'actions@users.noreply.github.com'
-        git pull --rebase origin main
+        git pull --rebase
         git add all_messages.csv
-        git commit -m "Auto-update classified messages"
+        git diff --quiet && git diff --staged --quiet || git commit -m "Auto-update: Classified messages $(date +'%Y-%m-%d %H:%M')"
         git push

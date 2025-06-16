@@ -18,16 +18,14 @@ import pytz
 # Environment configuration
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "aisamarth2016@gmail.com")
 RECEIVER_EMAILS = [
-    os.environ.get("RECEIVER_EMAIL", "madhavik.agarwal@samarth.community"),
+    "madhavik.agarwal@samarth.community",
     "asheesh.gupta@samarth.community",
     "arihant.jain@samarth.community"
 ]
 EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "oisx vsbh ongm dpke")
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 FIREBASE_CREDENTIALS = os.environ["FIREBASE_CREDENTIALS"]
-
-# File paths
-MASTER_CSV = "master_elder_care_messages.csv"
+MASTER_CSV_PATH = "all_elder_messages.csv"
 
 # Classification constants
 BATCH_SIZE = 8
@@ -62,25 +60,20 @@ cred = credentials.Certificate("firebase_credentials.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-def get_ist_time_range():
-    """Get start and end times for the previous full hour in IST"""
-    ist = pytz.timezone('Asia/Kolkata')
-    utc_now = datetime.utcnow()
+def get_indian_time_range():
+    """Get time range for the last full hour in IST"""
+    tz_ist = pytz.timezone('Asia/Kolkata')
+    now_ist = datetime.now(tz_ist)
     
-    # Convert to IST and snap to previous full hour
-    ist_now = utc_now.replace(tzinfo=pytz.utc).astimezone(ist)
-    end_time_ist = ist_now.replace(minute=0, second=0, microsecond=0)
+    # Calculate start and end of previous hour
+    end_time_ist = now_ist.replace(minute=0, second=0, microsecond=0)
     start_time_ist = end_time_ist - timedelta(hours=1)
     
-    # Convert back to UTC for query
-    start_time_utc = start_time_ist.astimezone(pytz.utc).replace(tzinfo=None)
-    end_time_utc = end_time_ist.astimezone(pytz.utc).replace(tzinfo=None)
+    # Convert to UTC for Firebase query
+    start_time_utc = start_time_ist.astimezone(pytz.utc)
+    end_time_utc = end_time_ist.astimezone(pytz.utc)
     
-    # Format for filename (e.g. "20240616_1200-1300_IST")
-    time_range_str = (f"{start_time_ist.strftime('%Y%m%d_%H00')}-"
-                     f"{end_time_ist.strftime('%H00')}_IST")
-    
-    return start_time_utc, end_time_utc, time_range_str
+    return start_time_ist, end_time_ist, start_time_utc, end_time_utc
 
 def fetch_accounts():
     """Fetch all account documents with their IDs and names"""
@@ -90,27 +83,40 @@ def fetch_accounts():
     ]
 
 def fetch_messages(account_id, start_time_utc, end_time_utc):
-    """Fetch messages for a specific account within UTC time range"""
+    """Fetch messages for a specific account within time range"""
     chats_ref = db.collection("chats")
-    query = (chats_ref.where('accountId', '==', account_id)
-             .where('createdAt', '>=', start_time_utc)
-             .where('createdAt', '<', end_time_utc))
+    query = chats_ref.where('accountId', '==', account_id
+                          ).where('createdAt', '>=', start_time_utc
+                          ).where('createdAt', '<', end_time_utc)
     
-    return [{
-        'account_id': account_id,
-        'message': doc.to_dict().get('message', ''),
-        'createdAt': doc.to_dict().get('createdAt').isoformat() if doc.to_dict().get('createdAt') else None,
-        'document_id': doc.id  # Add document ID for uniqueness
-    } for doc in query.stream()]
+    messages = []
+    for doc in query.stream():
+        data = doc.to_dict()
+        messages.append({
+            'account_id': account_id,
+            'message_id': doc.id,
+            'message': data.get('message', ''),
+            'createdAt': data.get('createdAt').isoformat() if data.get('createdAt') else None
+        })
+    return messages
 
 def fetch_all_messages(account_ids, start_time_utc, end_time_utc):
     """Parallel message fetching with progress tracking"""
     results = {}
     with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {executor.submit(fetch_messages, acc_id, start_time_utc, end_time_utc): acc_id 
-                  for acc_id in account_ids}
+        futures = {}
+        for acc_id in account_ids:
+            future = executor.submit(
+                fetch_messages, 
+                acc_id, 
+                start_time_utc, 
+                end_time_utc
+            )
+            futures[future] = acc_id
+            
         for future in tqdm(as_completed(futures), total=len(futures), desc="Fetching messages"):
-            results[futures[future]] = future.result()
+            acc_id = futures[future]
+            results[acc_id] = future.result()
     return results
 
 def smart_truncate(text, max_length=4000):
@@ -155,7 +161,7 @@ def classify_batch(messages, depth=0):
             json_match = re.search(r'\[.*\]', content)
             if json_match:
                 results = json.loads(json_match.group(0))
-                if len(results) == num_messages and all(r in ["urgent", "not urgent"] for r in results):
+                if len(results) == num_messages and all(r.lower() in ["urgent", "not urgent"] for r in results):
                     return [r.lower() for r in results]
         
         except Exception as e:
@@ -182,19 +188,34 @@ def batch_classify_messages(messages):
     
     return results
 
-def send_email_with_attachment(csv_path, time_range_str):
+def update_master_csv(new_df):
+    """Update master CSV with all historical data"""
+    try:
+        if os.path.exists(MASTER_CSV_PATH):
+            master_df = pd.read_csv(MASTER_CSV_PATH)
+            # Combine and remove duplicates
+            combined = pd.concat([master_df, new_df]).drop_duplicates(
+                subset=['account_id', 'message_id', 'createdAt']
+            )
+            combined.to_csv(MASTER_CSV_PATH, index=False)
+        else:
+            new_df.to_csv(MASTER_CSV_PATH, index=False)
+    except Exception as e:
+        print(f"Error updating master CSV: {str(e)}")
+
+def send_email_with_attachment(csv_path, time_range):
     """Send email with CSV attachment to multiple recipients"""
-    ist_now = datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%Y-%m-%d %H:%M:%S %Z')
+    start_str, end_str = time_range
     
     msg = MIMEMultipart()
     msg['From'] = SENDER_EMAIL
     msg['To'] = ", ".join(RECEIVER_EMAILS)
-    msg['Subject'] = f"Urgent Messages Report - {time_range_str.replace('_', ' ')}"
+    msg['Subject'] = f"Urgent Messages Report ({start_str} to {end_str} IST)"
     
     body = f"""
-    Automated report generated at {ist_now}
+    Automated report generated at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     
-    This report contains urgent messages from: {time_range_str.replace('_', ' ')}
+    This report contains messages classified as urgent from {start_str} to {end_str} IST.
     """
     msg.attach(MIMEText(body, 'plain'))
     
@@ -207,46 +228,29 @@ def send_email_with_attachment(csv_path, time_range_str):
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(SENDER_EMAIL, EMAIL_PASSWORD)
             server.sendmail(SENDER_EMAIL, RECEIVER_EMAILS, msg.as_string())
-        print(f"✅ Report sent to {len(RECEIVER_EMAILS)} recipients")
+        print("✅ Report sent successfully via email")
     except Exception as e:
         print(f"❌ Email sending failed: {str(e)}")
 
-def update_master_csv(new_df):
-    """Update master CSV with new data, avoiding duplicates"""
-    # Add processing timestamp
-    new_df['processed_at'] = datetime.utcnow().isoformat()
-    
-    if os.path.exists(MASTER_CSV):
-        # Load existing data
-        master_df = pd.read_csv(MASTER_CSV)
-        
-        # Merge old and new data
-        combined_df = pd.concat([master_df, new_df])
-        
-        # Remove duplicates based on document ID and timestamp
-        combined_df = combined_df.drop_duplicates(
-            subset=['document_id', 'createdAt'], 
-            keep='last'
-        )
-    else:
-        combined_df = new_df
-    
-    # Save updated master CSV
-    combined_df.to_csv(MASTER_CSV, index=False)
-    print(f"📊 Master CSV updated with {len(combined_df)} total records")
-    
-    return combined_df
-
 def main():
-    # Get time range for previous full hour in IST
-    start_time_utc, end_time_utc, time_range_str = get_ist_time_range()
-    print(f"Fetching messages from {start_time_utc} UTC to {end_time_utc} UTC "
-          f"({time_range_str.replace('_', ' ')})")
-
+    # Get time range for previous hour in IST
+    start_ist, end_ist, start_utc, end_utc = get_indian_time_range()
+    time_range_str = (
+        start_ist.strftime('%H:%M'), 
+        end_ist.strftime('%H:%M')
+    )
+    date_str = start_ist.strftime('%Y%m%d')
+    
+    print(f"⌚ Processing data for {date_str} {time_range_str[0]}-{time_range_str[1]} IST")
+    
     # Fetch accounts and messages
     accounts = fetch_accounts()
     account_map = {acc['id']: acc['name'] for acc in accounts}
-    all_messages = fetch_all_messages(list(account_map.keys()), start_time_utc, end_time_utc)
+    all_messages = fetch_all_messages(
+        list(account_map.keys()), 
+        start_utc, 
+        end_utc
+    )
     
     # Flatten messages
     messages_list = []
@@ -254,32 +258,36 @@ def main():
         messages_list.extend(msg_list)
     
     if not messages_list:
-        print("No messages found in the specified time range")
+        print("⏭️ No messages found in time range")
         return
     
     # Create DataFrame
     df = pd.DataFrame(messages_list)
     df['account_name'] = df['account_id'].map(account_map)
-    df['run_period'] = time_range_str  # Add time period identifier
     
-    # Classify urgency
+    # Classify urgency using GPT-4o
     df['urgency'] = batch_classify_messages(df['message'].tolist())
     
     # Update master CSV with all messages
-    update_master_csv(df)
+    update_master_csv(df[['account_id', 'account_name', 'message_id', 
+                         'message', 'urgency', 'createdAt']])
     
-    # Filter urgent messages for email
+    # Filter and save urgent messages
     urgent_df = df[df['urgency'] == 'urgent']
-    
     if not urgent_df.empty:
-        # Save urgent messages for email
-        urgent_csv_path = f"urgent_messages_{time_range_str}.csv"
-        urgent_df.to_csv(urgent_csv_path, index=False)
+        # Generate report filename
+        report_filename = (
+            f"urgent_messages_{date_str}_"
+            f"{time_range_str[0].replace(':', '')}-"
+            f"{time_range_str[1].replace(':', '')}.csv"
+        )
+        urgent_df.to_csv(report_filename, index=False)
+        print(f"✅ Found {len(urgent_df)} urgent messages")
         
-        print(f"🚨 Found {len(urgent_df)} urgent messages")
-        send_email_with_attachment(urgent_csv_path, time_range_str)
+        # Send email with report
+        send_email_with_attachment(report_filename, time_range_str)
     else:
-        print(f"⏭️ No urgent messages found in {time_range_str.replace('_', ' ')}")
+        print("⏭️ No urgent messages to report")
 
 if __name__ == "__main__":
     main()

@@ -33,7 +33,7 @@ jobs:
         SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
         EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
         RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
-      run: python fetch_firebase_message.py
+      run: python fetch_firebase_messages.py
 
     - name: Commit and push report
       run: |

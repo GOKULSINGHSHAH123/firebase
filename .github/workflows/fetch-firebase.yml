@@ -24,7 +24,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install firebase_admin pandas tqdm openai
+        pip install firebase_admin pandas tqdm openai pytz
 
     - name: Generate urgent messages report
       env:

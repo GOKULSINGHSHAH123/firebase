@@ -6,24 +6,50 @@ import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 from datetime import datetime, timedelta
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import torch
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
+import openai
+import time
+import re
 
-# Hardcoded email credentials
-SENDER_EMAIL = "gokulsinghshah041@gmail.com"
-RECEIVER_EMAIL = "madhavik.agarwal@samarth.community"
-EMAIL_PASSWORD = "asxm hriw skph mfpb"  # Hardcoded password
+# Environment configuration
+SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "gokulsinghshah041@gmail.com")
+RECEIVER_EMAIL = os.environ.get("RECEIVER_EMAIL", "madhavik.agarwal@samarth.community")
+EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "asxm hriw skph mfpb")
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]  # Set in environment variables
+FIREBASE_CREDENTIALS = os.environ["FIREBASE_CREDENTIALS"]
 
-# Decode and write FIREBASE_CREDENTIALS to file
-firebase_creds = os.environ["FIREBASE_CREDENTIALS"]
-with open("firebase_credentials.json", "w") as f:
-    json.dump(json.loads(firebase_creds), f)
+# Classification constants
+BATCH_SIZE = 8
+MAX_RETRIES = 3
+MAX_DEPTH = 3
+MODEL = "gpt-4o"
+PROMPT_TEMPLATE = """
+CLASSIFY ELDER CARE MESSAGE URGENCY
+-----------------------------------
+Analyze messages between elderly children and care leaders. Classify each message as:
+- 'urgent' if it meets ANY:
+  • Requires action/follow-up
+  • Shows dissatisfaction/complaints
+  • Reports service issues
+  • Contains critical health/safety updates
+  • Includes customer requests
+  • Needs immediate attention
+
+- 'not urgent' for:
+  • General updates without concern
+  • Positive feedback
+  • Routine information
+
+Return EXACTLY {num_messages} classifications as a JSON array: ["urgent", "not urgent", ...]
+"""
 
 # Initialize Firebase
+with open("firebase_credentials.json", "w") as f:
+    json.dump(json.loads(FIREBASE_CREDENTIALS), f)
+
 cred = credentials.Certificate("firebase_credentials.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
@@ -33,21 +59,20 @@ one_hour_ago = datetime.utcnow() - timedelta(hours=1)
 
 def fetch_accounts():
     """Fetch all account documents with their IDs and names"""
-    accounts_ref = db.collection("accounts")
-    docs = accounts_ref.stream()
-    return [{'id': doc.id, 'name': doc.to_dict().get('name', 'N/A')} for doc in docs]
+    return [
+        {'id': doc.id, 'name': doc.to_dict().get('name', 'N/A')} 
+        for doc in db.collection("accounts").stream()
+    ]
 
 def fetch_messages(account_id):
     """Fetch recent messages for a specific account"""
     chats_ref = db.collection("chats")
-    chat_docs = chats_ref.where('accountId', '==', account_id) \
-                         .where('createdAt', '>=', one_hour_ago) \
-                         .stream()
+    query = chats_ref.where('accountId', '==', account_id).where('createdAt', '>=', one_hour_ago)
     return [{
         'account_id': account_id,
-        'message': chat_doc.to_dict().get('message', ''),
-        'createdAt': chat_doc.to_dict().get('createdAt').isoformat() if chat_doc.to_dict().get('createdAt') else None
-    } for chat_doc in chat_docs]
+        'message': doc.to_dict().get('message', ''),
+        'createdAt': doc.to_dict().get('createdAt').isoformat() if doc.to_dict().get('createdAt') else None
+    } for doc in query.stream()]
 
 def fetch_all_messages(account_ids):
     """Parallel message fetching with progress tracking"""
@@ -58,53 +83,74 @@ def fetch_all_messages(account_ids):
             results[futures[future]] = future.result()
     return results
 
-def init_classifier():
-    """Initialize the urgency classification model"""
-    model_name = "cardiffnlp/twitter-roberta-base-sentiment"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name)
-    model.eval()
-    return tokenizer, model
+def smart_truncate(text, max_length=4000):
+    """Ensure text fits within model context limits"""
+    return text[:max_length] + ' [...]' if len(text) > max_length else text
 
-def classify_urgency(message, tokenizer, model):
-    """Classify message urgency using keywords and sentiment analysis"""
-    # Handle empty messages
-    if not message or not isinstance(message, str):
-        return "NOT URGENT"
+def classify_batch(messages, depth=0):
+    """Classify message batch using GPT-4o with retry logic"""
+    if depth > MAX_DEPTH or not messages:
+        return ["not urgent"] * len(messages)
     
-    message_lower = message.lower()
-    urgent_keywords = [
-        "urgent", "emergency", "immediately", "asap", "problem", "issue",
-        "need help", "need support", "critical", "not working",
-        "replacement", "refund", "fail", "crash", "broken",
-        "help needed", "important", "priority", "as soon as possible"
+    client = openai.OpenAI(api_key=OPENAI_API_KEY)
+    num_messages = len(messages)
+    formatted_messages = [
+        f"{i+1}. {smart_truncate(msg.replace('"', "'").strip())}"
+        for i, msg in enumerate(messages)
     ]
     
-    # Keyword-based urgency detection
-    if any(kw in message_lower for kw in urgent_keywords):
-        return "URGENT"
+    prompt = PROMPT_TEMPLATE.format(num_messages=num_messages) + "\n" + "\n".join(formatted_messages)
     
-    # Sentiment-based classification
-    try:
-        inputs = tokenizer(message, return_tensors="pt", truncation=True, max_length=512)
-        with torch.no_grad():
-            outputs = model(**inputs)
-        predicted_class = torch.argmax(outputs.logits, dim=1).item()
-        # Class 0: Negative, Class 1: Neutral, Class 2: Positive
-        return "URGENT" if predicted_class == 0 else "NOT URGENT"
-    except Exception as e:
-        print(f"Classification error: {e}")
-        return "NOT URGENT"
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = client.chat.completions.create(
+                model=MODEL,
+                messages=[
+                    {"role": "system", "content": "You are an elder care urgency classification assistant."},
+                    {"role": "user", "content": prompt + "\n\nONLY RETURN THE JSON ARRAY. NO OTHER TEXT."}
+                ],
+                temperature=0.1,
+                response_format={"type": "json_object"}
+            )
+            
+            content = response.choices[0].message.content.strip()
+            json_match = re.search(r'\[.*\]', content)
+            if json_match:
+                results = json.loads(json_match.group(0))
+                if len(results) == num_messages and all(r in ["urgent", "not urgent"] for r in results):
+                    return [r.lower() for r in results]
+        
+        except Exception as e:
+            print(f"Classification error (attempt {attempt+1}): {str(e)}")
+        
+        time.sleep(1.5)
+    
+    # Recursive batch splitting if retries fail
+    if len(messages) > 1:
+        mid = len(messages) // 2
+        return (classify_batch(messages[:mid], depth + 1) + 
+                classify_batch(messages[mid:], depth + 1))
+    
+    return ["not urgent"]
+
+def batch_classify_messages(messages):
+    """Process messages in batches with progress tracking"""
+    batches = [messages[i:i+BATCH_SIZE] for i in range(0, len(messages), BATCH_SIZE)]
+    results = []
+    
+    for batch in tqdm(batches, desc="Classifying urgency"):
+        results.extend(classify_batch(batch))
+        time.sleep(1)  # Rate limit protection
+    
+    return results
 
 def send_email_with_attachment(csv_path):
-    """Send email with CSV attachment using hardcoded credentials"""
-    # Create message container
+    """Send email with CSV attachment"""
     msg = MIMEMultipart()
     msg['From'] = SENDER_EMAIL
     msg['To'] = RECEIVER_EMAIL
     msg['Subject'] = "Urgent Messages Report"
     
-    # Email body
     body = f"""
     Automated report generated at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     
@@ -112,13 +158,11 @@ def send_email_with_attachment(csv_path):
     """
     msg.attach(MIMEText(body, 'plain'))
     
-    # Attach CSV file
     with open(csv_path, "rb") as attachment:
         part = MIMEApplication(attachment.read(), Name=os.path.basename(csv_path))
     part['Content-Disposition'] = f'attachment; filename="{os.path.basename(csv_path)}"'
     msg.attach(part)
     
-    # Send email
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(SENDER_EMAIL, EMAIL_PASSWORD)
@@ -130,41 +174,35 @@ def send_email_with_attachment(csv_path):
 def main():
     # Fetch accounts and messages
     accounts = fetch_accounts()
-    account_ids = [acc['id'] for acc in accounts]
-    all_messages = fetch_all_messages(account_ids)
+    account_map = {acc['id']: acc['name'] for acc in accounts}
+    all_messages = fetch_all_messages(list(account_map.keys()))
     
-    # Flatten messages and create DataFrame
+    # Flatten messages
     messages_list = []
-    for account_id, msg_list in all_messages.items():
+    for msg_list in all_messages.values():
         messages_list.extend(msg_list)
     
     if not messages_list:
         print("No recent messages found")
         return
     
+    # Create DataFrame
     df = pd.DataFrame(messages_list)
-    
-    # Add account names
-    account_map = {acc['id']: acc['name'] for acc in accounts}
     df['account_name'] = df['account_id'].map(account_map)
     
-    # Initialize classifier
-    tokenizer, model = init_classifier()
+    # Classify urgency using GPT-4o
+    df['urgency'] = batch_classify_messages(df['message'].tolist())
     
-    # Classify urgency
-    tqdm.pandas(desc="Classifying urgency")
-    df['urgency'] = df['message'].progress_apply(
-        lambda msg: classify_urgency(msg, tokenizer, model)
-    )
+    # Save and send report
+    csv_path = f"urgent_messages_{datetime.utcnow().strftime('%Y%m%d_%H%M')}.csv"
+    df[['account_id', 'account_name', 'message', 'urgency', 'createdAt']].to_csv(csv_path, index=False)
+    print(f"✅ Report generated with {len(df)} messages")
     
-    # Save results
-    csv_path = 'urgent_messages_report.csv'
-    df = df[['account_id', 'account_name', 'message', 'urgency', 'createdAt']]
-    df.to_csv(csv_path, index=False)
-    print(f"\n✅ Report generated with {len(df)} messages")
-    
-    # Send email with attachment
-    send_email_with_attachment(csv_path)
+    # Send email if urgent messages found
+    if 'urgent' in df['urgency'].values:
+        send_email_with_attachment(csv_path)
+    else:
+        print("⏭️ No urgent messages to report")
 
 if __name__ == "__main__":
     main()

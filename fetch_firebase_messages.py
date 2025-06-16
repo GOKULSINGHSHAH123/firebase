@@ -7,9 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 from datetime import datetime, timedelta
 import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.application import MIMEApplication
+from email.message import EmailMessage
 import openai
 import time
 import re
@@ -171,29 +169,33 @@ def batch_classify_messages(messages):
     return results
 
 def send_email_with_attachment(csv_path, time_interval):
-    """Send email with CSV attachment"""
-    msg = MIMEMultipart()
+    """Send email with CSV attachment using EmailMessage"""
+    msg = EmailMessage()
     msg['From'] = SENDER_EMAIL
     msg['To'] = RECEIVER_EMAIL
     msg['Subject'] = f"Urgent Messages Report - {time_interval} IST"
     
-    body = f"""
-    Automated report generated at {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}
+    body = f"""Automated report generated at {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}
+
+This report contains messages classified as urgent during:
+{time_interval} IST
+"""
+    msg.set_content(body)
     
-    This report contains messages classified as urgent during the time interval:
-    {time_interval} IST
-    """
-    msg.attach(MIMEText(body, 'plain'))
-    
-    with open(csv_path, "rb") as attachment:
-        part = MIMEApplication(attachment.read(), Name=os.path.basename(csv_path))
-    part['Content-Disposition'] = f'attachment; filename="{os.path.basename(csv_path)}"'
-    msg.attach(part)
+    # Add CSV attachment
+    with open(csv_path, "rb") as f:
+        csv_data = f.read()
+    msg.add_attachment(
+        csv_data,
+        maintype="text",
+        subtype="csv",
+        filename=os.path.basename(csv_path)
+    )
     
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(SENDER_EMAIL, EMAIL_PASSWORD)
-            server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, msg.as_string())
+            server.send_message(msg)
         print("✅ Report sent successfully via email")
     except Exception as e:
         print(f"❌ Email sending failed: {str(e)}")

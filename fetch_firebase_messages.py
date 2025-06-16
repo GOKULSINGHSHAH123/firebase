@@ -169,35 +169,45 @@ def send_email_with_attachment(csv_path, interval_text):
 
 # Main
 def main():
-    start_utc, end_utc, interval_text = get_utc_interval_last_hour()
+    # Calculate previous full hour interval in UTC and IST label
+    now = datetime.utcnow()
+    end_utc = now.replace(minute=0, second=0, microsecond=0)
+    start_utc = end_utc - timedelta(hours=1)
+    ist_start = (start_utc + timedelta(hours=5, minutes=30)).strftime('%I:%M %p')
+    ist_end = (end_utc + timedelta(hours=5, minutes=30)).strftime('%I:%M %p')
+    interval_text = f"{ist_start} to {ist_end} IST"
 
+    # Fetch and classify
     accounts = fetch_accounts()
     account_map = {acc['id']: acc['name'] for acc in accounts}
     all_messages = fetch_all_messages(list(account_map.keys()), start_utc, end_utc)
-
+    
+    # Flatten
     messages_list = [msg for sublist in all_messages.values() for msg in sublist]
     if not messages_list:
         print("No messages found in the interval.")
         return
-
+    
     df = pd.DataFrame(messages_list)
     df['account_name'] = df['account_id'].map(account_map)
     df['urgency'] = batch_classify_messages(df['message'].tolist())
 
-    # Save full data to master CSV (append mode)
-    if os.path.exists(ALL_CSV_PATH):
-        df.to_csv(ALL_CSV_PATH, mode='a', index=False, header=False)
+    # ✅ Append to full history CSV (tracked in GitHub)
+    all_csv_path = "all_classified_messages.csv"
+    if os.path.exists(all_csv_path):
+        df.to_csv(all_csv_path, mode='a', index=False, header=False)
     else:
-        df.to_csv(ALL_CSV_PATH, index=False)
+        df.to_csv(all_csv_path, index=False)
 
-    # Save urgent messages for email
+    # 📧 Email only urgent messages
     urgent_df = df[df['urgency'] == 'urgent']
     if not urgent_df.empty:
-        urgent_csv_path = f"urgent_messages_{datetime.utcnow().strftime('%Y%m%d_%H%M')}.csv"
-        urgent_df[['account_id', 'account_name', 'message', 'urgency', 'createdAt']].to_csv(urgent_csv_path, index=False)
-        send_email_with_attachment(urgent_csv_path, interval_text)
+        urgent_csv = f"urgent_messages_{datetime.utcnow().strftime('%Y%m%d_%H%M')}.csv"
+        urgent_df[['account_id', 'account_name', 'message', 'urgency', 'createdAt']].to_csv(urgent_csv, index=False)
+        send_email_with_attachment(urgent_csv, interval_text)
     else:
         print("No urgent messages to report.")
+
 
 if __name__ == "__main__":
     main()

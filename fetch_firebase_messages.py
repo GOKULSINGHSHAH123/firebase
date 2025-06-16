@@ -13,6 +13,7 @@ from email.mime.application import MIMEApplication
 import openai
 import time
 import re
+import pytz
 
 # Environment configuration
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "gokulsinghshah041@gmail.com")
@@ -21,11 +22,13 @@ EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "asxm hriw skph mfpb")
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 FIREBASE_CREDENTIALS = os.environ["FIREBASE_CREDENTIALS"]
 
-# Classification constants
+# Constants
 BATCH_SIZE = 8
 MAX_RETRIES = 3
 MAX_DEPTH = 3
 MODEL = "gpt-4o"
+ALL_CSV_PATH = "all_classified_messages.csv"
+
 PROMPT_TEMPLATE = """
 CLASSIFY ELDER CARE MESSAGE URGENCY
 -----------------------------------
@@ -54,62 +57,58 @@ cred = credentials.Certificate("firebase_credentials.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# Calculate timestamp for 1 hour ago (UTC)
-one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+# Get last full hour interval in UTC from IST
+def get_utc_interval_last_hour():
+    ist = pytz.timezone('Asia/Kolkata')
+    now_ist = datetime.now(ist)
+    last_hour = now_ist.replace(minute=0, second=0, microsecond=0) - timedelta(hours=1)
+    start_utc = last_hour.astimezone(pytz.utc)
+    end_utc = (last_hour + timedelta(hours=1)).astimezone(pytz.utc)
+    return start_utc, end_utc, last_hour.strftime('%I %p') + " to " + (last_hour + timedelta(hours=1)).strftime('%I %p')
 
+# Fetch accounts
 def fetch_accounts():
-    """Fetch all account documents with their IDs and names"""
-    return [
-        {'id': doc.id, 'name': doc.to_dict().get('name', 'N/A')} 
-        for doc in db.collection("accounts").stream()
-    ]
+    return [{'id': doc.id, 'name': doc.to_dict().get('name', 'N/A')} for doc in db.collection("accounts").stream()]
 
-def fetch_messages(account_id):
-    """Fetch recent messages for a specific account"""
-    chats_ref = db.collection("chats")
-    query = chats_ref.where('accountId', '==', account_id).where('createdAt', '>=', one_hour_ago)
+# Fetch messages in 1-hour interval
+def fetch_messages(account_id, start_utc, end_utc):
+    query = db.collection("chats").where('accountId', '==', account_id).where('createdAt', '>=', start_utc).where('createdAt', '<', end_utc)
     return [{
         'account_id': account_id,
         'message': doc.to_dict().get('message', ''),
         'createdAt': doc.to_dict().get('createdAt').isoformat() if doc.to_dict().get('createdAt') else None
     } for doc in query.stream()]
 
-def fetch_all_messages(account_ids):
-    """Parallel message fetching with progress tracking"""
+# Fetch all in parallel
+def fetch_all_messages(account_ids, start_utc, end_utc):
     results = {}
     with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {executor.submit(fetch_messages, acc_id): acc_id for acc_id in account_ids}
+        futures = {executor.submit(fetch_messages, acc_id, start_utc, end_utc): acc_id for acc_id in account_ids}
         for future in tqdm(as_completed(futures), total=len(futures), desc="Fetching messages"):
             results[futures[future]] = future.result()
     return results
 
+# Prompt creation
 def smart_truncate(text, max_length=4000):
-    """Ensure text fits within model context limits"""
-    if len(text) <= max_length:
-        return text
-    return text[:max_length] + ' [...]'
+    return text if len(text) <= max_length else text[:max_length] + ' [...]'
 
 def create_batch_prompt(messages):
     num_messages = len(messages)
     prompt = PROMPT_TEMPLATE.format(num_messages=num_messages) + "\n"
-    
-    # Corrected string formatting
     for i, msg in enumerate(messages, 1):
         clean_msg = msg.replace('"', "'").strip()
-        truncated = smart_truncate(clean_msg)
-        prompt += f"\n{i}. {truncated}"
-    
+        prompt += f"\n{i}. {smart_truncate(clean_msg)}"
     return prompt
 
+# Classification
 def classify_batch(messages, depth=0):
-    """Classify message batch using GPT-4o with retry logic"""
     if depth > MAX_DEPTH or not messages:
         return ["not urgent"] * len(messages)
-    
+
     client = openai.OpenAI(api_key=OPENAI_API_KEY)
     num_messages = len(messages)
     prompt = create_batch_prompt(messages)
-    
+
     for attempt in range(MAX_RETRIES):
         try:
             response = client.chat.completions.create(
@@ -121,97 +120,84 @@ def classify_batch(messages, depth=0):
                 temperature=0.1,
                 response_format={"type": "json_object"}
             )
-            
             content = response.choices[0].message.content.strip()
             json_match = re.search(r'\[.*\]', content)
             if json_match:
                 results = json.loads(json_match.group(0))
                 if len(results) == num_messages and all(r in ["urgent", "not urgent"] for r in results):
                     return [r.lower() for r in results]
-        
         except Exception as e:
             print(f"Classification error (attempt {attempt+1}): {str(e)}")
-        
         time.sleep(1.5)
-    
-    # Recursive batch splitting if retries fail
+
     if len(messages) > 1:
         mid = len(messages) // 2
-        return (classify_batch(messages[:mid], depth + 1) + 
-                classify_batch(messages[mid:], depth + 1))
-    
+        return classify_batch(messages[:mid], depth + 1) + classify_batch(messages[mid:], depth + 1)
+
     return ["not urgent"]
 
 def batch_classify_messages(messages):
-    """Process messages in batches with progress tracking"""
     batches = [messages[i:i+BATCH_SIZE] for i in range(0, len(messages), BATCH_SIZE)]
     results = []
-    
     for batch in tqdm(batches, desc="Classifying urgency"):
         results.extend(classify_batch(batch))
-        time.sleep(1)  # Rate limit protection
-    
+        time.sleep(1)
     return results
 
-def send_email_with_attachment(csv_path):
-    """Send email with CSV attachment"""
+# Email
+def send_email_with_attachment(csv_path, interval_text):
     msg = MIMEMultipart()
     msg['From'] = SENDER_EMAIL
     msg['To'] = RECEIVER_EMAIL
-    msg['Subject'] = "Urgent Messages Report"
-    
-    body = f"""
-    Automated report generated at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-    
-    This report contains messages classified as urgent from the last hour.
-    """
+    msg['Subject'] = f"Urgent Messages Report ({interval_text} IST)"
+
+    body = f"Automated urgent message report for the interval {interval_text} IST."
     msg.attach(MIMEText(body, 'plain'))
-    
+
     with open(csv_path, "rb") as attachment:
         part = MIMEApplication(attachment.read(), Name=os.path.basename(csv_path))
     part['Content-Disposition'] = f'attachment; filename="{os.path.basename(csv_path)}"'
     msg.attach(part)
-    
+
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(SENDER_EMAIL, EMAIL_PASSWORD)
             server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, msg.as_string())
-        print("✅ Report sent successfully via email")
+        print("✅ Email with urgent report sent.")
     except Exception as e:
-        print(f"❌ Email sending failed: {str(e)}")
+        print(f"❌ Failed to send email: {e}")
 
+# Main
 def main():
-    # Fetch accounts and messages
+    start_utc, end_utc, interval_text = get_utc_interval_last_hour()
+
     accounts = fetch_accounts()
     account_map = {acc['id']: acc['name'] for acc in accounts}
-    all_messages = fetch_all_messages(list(account_map.keys()))
-    
-    # Flatten messages
-    messages_list = []
-    for msg_list in all_messages.values():
-        messages_list.extend(msg_list)
-    
+    all_messages = fetch_all_messages(list(account_map.keys()), start_utc, end_utc)
+
+    messages_list = [msg for sublist in all_messages.values() for msg in sublist]
     if not messages_list:
-        print("No recent messages found")
+        print("No messages found in the interval.")
         return
-    
-    # Create DataFrame
+
     df = pd.DataFrame(messages_list)
     df['account_name'] = df['account_id'].map(account_map)
-    
-    # Classify urgency using GPT-4o
     df['urgency'] = batch_classify_messages(df['message'].tolist())
-    
-    # Save and send report
-    csv_path = f"urgent_messages_{datetime.utcnow().strftime('%Y%m%d_%H%M')}.csv"
-    df[['account_id', 'account_name', 'message', 'urgency', 'createdAt']].to_csv(csv_path, index=False)
-    print(f"✅ Report generated with {len(df)} messages")
-    
-    # Send email if urgent messages found
-    if 'urgent' in df['urgency'].values:
-        send_email_with_attachment(csv_path)
+
+    # Save full data to master CSV (append mode)
+    if os.path.exists(ALL_CSV_PATH):
+        df.to_csv(ALL_CSV_PATH, mode='a', index=False, header=False)
     else:
-        print("⏭️ No urgent messages to report")
+        df.to_csv(ALL_CSV_PATH, index=False)
+
+    # Save urgent messages for email
+    urgent_df = df[df['urgency'] == 'urgent']
+    if not urgent_df.empty:
+        urgent_csv_path = f"urgent_messages_{datetime.utcnow().strftime('%Y%m%d_%H%M')}.csv"
+        urgent_df[['account_id', 'account_name', 'message', 'urgency', 'createdAt']].to_csv(urgent_csv_path, index=False)
+        send_email_with_attachment(urgent_csv_path, interval_text)
+    else:
+        print("No urgent messages to report.")
 
 if __name__ == "__main__":
     main()

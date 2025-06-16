@@ -18,7 +18,7 @@ import re
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "gokulsinghshah041@gmail.com")
 RECEIVER_EMAIL = os.environ.get("RECEIVER_EMAIL", "madhavik.agarwal@samarth.community")
 EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "asxm hriw skph mfpb")
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]  # Set in environment variables
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 FIREBASE_CREDENTIALS = os.environ["FIREBASE_CREDENTIALS"]
 
 # Classification constants
@@ -85,7 +85,21 @@ def fetch_all_messages(account_ids):
 
 def smart_truncate(text, max_length=4000):
     """Ensure text fits within model context limits"""
-    return text[:max_length] + ' [...]' if len(text) > max_length else text
+    if len(text) <= max_length:
+        return text
+    return text[:max_length] + ' [...]'
+
+def create_batch_prompt(messages):
+    num_messages = len(messages)
+    prompt = PROMPT_TEMPLATE.format(num_messages=num_messages) + "\n"
+    
+    # Corrected string formatting
+    for i, msg in enumerate(messages, 1):
+        clean_msg = msg.replace('"', "'").strip()
+        truncated = smart_truncate(clean_msg)
+        prompt += f"\n{i}. {truncated}"
+    
+    return prompt
 
 def classify_batch(messages, depth=0):
     """Classify message batch using GPT-4o with retry logic"""
@@ -94,12 +108,7 @@ def classify_batch(messages, depth=0):
     
     client = openai.OpenAI(api_key=OPENAI_API_KEY)
     num_messages = len(messages)
-    formatted_messages = [
-        f"{i+1}. {smart_truncate(msg.replace('"', "'").strip())}"
-        for i, msg in enumerate(messages)
-    ]
-    
-    prompt = PROMPT_TEMPLATE.format(num_messages=num_messages) + "\n" + "\n".join(formatted_messages)
+    prompt = create_batch_prompt(messages)
     
     for attempt in range(MAX_RETRIES):
         try:

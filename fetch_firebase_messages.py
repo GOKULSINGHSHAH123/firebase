@@ -189,7 +189,7 @@ This report contains messages classified as urgent during:
         csv_data,
         maintype="text",
         subtype="csv",
-        filename=os.path.basename(csv_path)
+        filename=os.path.basename(csv_path))
     
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:

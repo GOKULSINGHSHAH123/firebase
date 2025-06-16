@@ -194,7 +194,7 @@ This report contains messages classified as urgent during:
     
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(SENDER_EMAIL, EMAIL_PASSWORD)
+            server.login("aisamarth2016@gmail.com", "xcag hxya fypu nbsq")
             server.send_message(msg)
         print("✅ Report sent successfully via email")
     except Exception as e:

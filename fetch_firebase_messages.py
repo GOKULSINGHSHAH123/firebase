@@ -15,9 +15,9 @@ import time
 import re
 
 # Environment configuration
-SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "gokulsinghshah041@gmail.com")
+SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "aisamarth2016@gmail.com")
 RECEIVER_EMAIL = os.environ.get("RECEIVER_EMAIL", "madhavik.agarwal@samarth.community")
-EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "asxm hriw skph mfpb")
+EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "oisx vsbh ongm dpke")
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 FIREBASE_CREDENTIALS = os.environ["FIREBASE_CREDENTIALS"]
 

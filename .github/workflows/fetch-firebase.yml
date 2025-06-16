@@ -40,6 +40,6 @@ jobs:
         git config --global user.name 'GitHub Actions'
         git config --global user.email 'actions@users.noreply.github.com'
         git pull --rebase origin main
-        git add all_classified_messages.csv
+        git add all_messages.csv
         git commit -m "Auto-update classified messages"
         git push

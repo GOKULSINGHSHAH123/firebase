@@ -16,7 +16,7 @@ import re
 # Environment configuration - USE THESE IN YOUR FUNCTION
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "aisamarth2016@gmail.com")
 RECEIVER_EMAIL = os.environ.get("RECEIVER_EMAIL", "madhavik.agarwal@samarth.community")
-EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "xcag hxya fypu nbsq")  # Added env fallback
+EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 FIREBASE_CREDENTIALS = os.environ["FIREBASE_CREDENTIALS"]
 

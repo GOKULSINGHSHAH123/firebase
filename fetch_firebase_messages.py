@@ -15,7 +15,11 @@ import re
 # Environment configuration
 # Environment configuration - USE THESE IN YOUR FUNCTION
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "aisamarth2016@gmail.com")
-RECEIVER_EMAIL = os.environ.get("RECEIVER_EMAIL", "madhavik.agarwal@samarth.community")
+RECEIVER_EMAILS = [
+    "madhavik.agarwal@samarth.community",
+    "asheesh.gupta@samarth.community",
+    "arihant.jain@samarth.community"
+]
 EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 FIREBASE_CREDENTIALS = os.environ["FIREBASE_CREDENTIALS"]
@@ -178,7 +182,7 @@ def send_email_with_attachment(csv_path, time_interval):
     """Send email with CSV attachment using EmailMessage"""
     msg = EmailMessage()
     msg['From'] = SENDER_EMAIL
-    msg['To'] = RECEIVER_EMAIL
+    msg['To'] = ', '.join(RECEIVER_EMAILS)
     msg['Subject'] = f"Urgent Messages Report - {time_interval} IST"
     
     body = f"""Automated report generated at {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}
@@ -199,12 +203,12 @@ This report contains messages classified as urgent during:
     
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(SENDER_EMAIL, EMAIL_PASSWORD)  # Use environment variables
+            server.login(SENDER_EMAIL, EMAIL_PASSWORD)
             server.send_message(msg)
         print("✅ Report sent successfully via email")
     except Exception as e:
         print(f"❌ Email sending failed: {str(e)}")
-        raise  # Re-raise exception for better error visibility
+        raise
 
 def append_to_master_csv(df, filename="all_messages.csv"):
     """Append messages to master CSV file in GitHub Actions"""

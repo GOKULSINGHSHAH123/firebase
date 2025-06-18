@@ -31,9 +31,7 @@ jobs:
       env:
         FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
         EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
       run: python fetch_firebase_messages.py
 
     - name: Commit and push updated master report

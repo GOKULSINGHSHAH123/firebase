@@ -53,21 +53,27 @@ cred = credentials.Certificate("firebase_credentials.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
+from datetime import datetime, timedelta
+
 def get_ist_time_range():
-    """Get the current hour interval in IST (UTC+5:30)"""
+    """Get the previous hour interval in IST (UTC+5:30)"""
     current_utc = datetime.utcnow()
     ist_offset = timedelta(hours=5, minutes=30)
     current_ist = current_utc + ist_offset
-    
-    # Calculate start and end of current hour in IST
-    start_ist = current_ist.replace(minute=0, second=0, microsecond=0)
+
+    # Shift to previous hour
+    previous_hour_ist = current_ist - timedelta(hours=1)
+
+    # Get start and end of the previous hour
+    start_ist = previous_hour_ist.replace(minute=0, second=0, microsecond=0)
     end_ist = start_ist + timedelta(hours=1)
-    
+
     # Convert to UTC for Firebase query
     start_utc = start_ist - ist_offset
     end_utc = end_ist - ist_offset
-    
+
     return start_utc, end_utc, start_ist, end_ist
+
 
 def fetch_accounts():
     """Fetch all account documents with their IDs and names"""

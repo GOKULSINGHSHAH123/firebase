@@ -2,7 +2,7 @@ name: Update Messages Report
 
 on:
   schedule:
-    - cron: '15 */1 * * *'  # Every 1 hour and 15 minutes (at :15 past the hour)
+    - cron: '15 */1 * * *'  # Every 1 hour and 15 minutes (at :15 past each hour)
   workflow_dispatch:
 
 jobs:
@@ -27,18 +27,28 @@ jobs:
         python -m pip install --upgrade pip
         pip install firebase-admin pandas tqdm openai pytz python-dotenv
 
-    - name: Generate urgent messages report
+    - name: Run message classification script
       env:
         FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        SENDER_EMAIL: "aisamarth2016@gmail.com"
+        RECEIVER_EMAIL: "madhavik.agarwal@samarth.community"
       run: python fetch_firebase_messages.py
 
     - name: Commit and push updated master report
       run: |
         git config --global user.name 'GitHub Actions'
         git config --global user.email 'actions@users.noreply.github.com'
+
+        # Stage only the master report file
+        git add all_messages.csv
+
+        # Only commit if there are actual changes
+        git diff --cached --quiet || git commit -m "Auto-update: Classified messages $(date +'%Y-%m-%d %H:%M')"
+
+        # Pull latest main with rebase
         git pull --rebase
-        git add all_message.csv
-        git diff --quiet && git diff --staged --quiet || git commit -m "Auto-update: Classified messages $(date +'%Y-%m-%d %H:%M')"
+
+        # Push updated commit
         git push
